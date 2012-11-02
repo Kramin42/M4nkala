@@ -1,1 +1,2 @@
-7z a -tzip -mx=9 M4nkala.jar *.class
+jar cvf M4nkala.jar -C bin .
+pause

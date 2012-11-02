@@ -73,7 +73,7 @@ public class g extends Applet implements Runnable {
 		int capturePot = 0;
 		
 		Color btnSelClr = new Color(128,255,128);
-		String btnNames[] = {"AntiAliasing","Easy","Standard","Moderate","Hard","Resign","AI vs AI","You vs AI","2 player"};
+		String btnNames[] = {"Anti-Aliasing","Easy","Standard","Moderate","Hard","Resign","AI vs AI","You vs AI","2 player"};
 		
 		
 		int size = 0;
