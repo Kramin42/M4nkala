@@ -1,0 +1,1 @@
+7z a -tzip -mx=9 M4nkala.jar *.class
