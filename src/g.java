@@ -1,3 +1,15 @@
+/*
+ * Author: Cameron Dykstra
+ * Email: kramin42@gmail.com
+ * 
+ * This is an implementation of the game Mancala in java
+ * 
+ * THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY 
+ * KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ */
+
 import java.applet.Applet;
 import java.awt.Event;
 import java.awt.Color;
@@ -7,8 +19,11 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.BufferedImageOp;
+import java.awt.image.RescaleOp;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -25,16 +40,19 @@ public class g extends Applet implements Runnable {
 	boolean showNumbers = true;
 	
 	boolean antialiasing=true;
+	boolean trailTransperancy = true;
 	
 	boolean mouseClick = false;
 	int potClicked = 0;
 	
-	int potXPos[] = { 300, 400, 525, 675, 800, 900, 1050, 900, 800, 675, 525, 400, 300, 150 };
-	int potYPos[] = { 530, 600, 650, 650, 600, 530, 400, 270, 200, 150, 150, 200, 270, 400 };
-	int potRad[] = { 50, 50, 50, 50, 50, 50, 100, 50, 50, 50, 50, 50, 50, 100 };
+	int potXPos[] = { 190, 255, 350, 450, 545, 610, 680, 610, 545, 450, 350, 255, 190, 120 };
+	int potYPos[] = { 420, 490, 520, 520, 490, 420, 300, 180, 110,  80,  80, 110, 180, 300 };
+	int potRad[] =  {  45,  45,  45,  45,  45,  45,  90,  45,  45,  45,  45,  45,  45,  90 };
 	
 	int numOfBtns = 9;
 	int btnW = 100,btnH = 20,btnSpc=10,btnXoff=10,btnYoff=20;//offsets
+	int btnJumpPos=4;
+	int btnJumpAmnt=270;//split the group of buttons
 	boolean btnStates[]={true,false,true,false,false,false,false,true,false};
 	
 	boolean redAI=true,blueAI=false;
@@ -44,10 +62,10 @@ public class g extends Applet implements Runnable {
 	boolean createNewGame = true;
 	boolean gameStarted = false;
 	boolean gameOver = false;
-	int strtBtnX=500,strtBtnY=500,strtBtnW=200,strtBtnH=40;
+	int strtBtnX=300,strtBtnY=340,strtBtnW=200,strtBtnH=40;
 
 	public void run() {
-		int w = 1200, h = 800;
+		int w = 800, h = 600;
 		setSize(w, h); // For AppletViewer, remove later.
 
 		// Set up the graphics stuff, double-buffering.
@@ -72,7 +90,7 @@ public class g extends Applet implements Runnable {
 		int sPot = 0;
 		int capturePot = 0;
 		
-		Color btnSelClr = new Color(128,255,128);
+		//Color btnSelClr = new Color(128,255,128);
 		String btnNames[] = {"Anti-Aliasing","Easy","Standard","Moderate","Hard","Resign","AI vs AI","You vs AI","2 player"};
 		
 		
@@ -96,19 +114,48 @@ public class g extends Applet implements Runnable {
 		int pot[] = new int[48];
 		boolean trvl[] = new boolean[48];
 		Color clr[] = new Color[48];
-		int bRad = 5;
+		int bRad = 1;
+		
+		//trail buffered images and vars
+		float alphaMult = 0.92f;
+		int trailNum = 50;
+		int trailInterval = 2;
+		float trailAlpha[] = new float[trailNum];
+		float alpha = 1.0f;
+		for (int i=trailNum-1;i>=0;i--){
+			trailAlpha[i]=alpha;
+			alpha*=alphaMult;
+		}
+		
+		ArrayList<Integer> trailXpos[] = new ArrayList[48];
+		ArrayList<Integer> trailYpos[] = new ArrayList[48];
+		for (int i=0;i<48;i++){
+			trailXpos[i] = new ArrayList<Integer>();
+			trailYpos[i] = new ArrayList<Integer>();
+		}
 
 		// constants
-		int ballspeed = 4;
-		double friction = 0.985;
-		double extraFriction = 0.90;
-		double gravity = 0.1;
+		int ballspeed = 6;
+		double friction = 0.97;
+		double extraFriction = 0.97;
+		int extraFrictionRadius = 100;
+		double gravity = 0.15;
 
 		// fonts
 		Font normalFont = new Font("Ariel", Font.PLAIN, 12);
 		Font largeFont = new Font("Ariel", Font.PLAIN, 60);
 		Font mediumFont = new Font("Ariel", Font.PLAIN, 30);
 		Font hugeFont = new Font("Ariel", Font.PLAIN, 120);
+		
+		//Colours
+		Color clrBG = Color.black;
+		Color clrLines = Color.gray;
+		Color clrDimRed = new Color(0x66FF0000,true);
+		Color clrDimBlue = new Color(0x660000FF,true);
+		Color clrTextRed = Color.red;
+		Color clrTextBlue = Color.blue;
+		Color clrBtnBG = new Color(0x8040FF00,true);
+		Color clrText = new Color(0xFFFFFFFF,true);
 
 		// Some variables to use for the fps.
 		int tick = 0, fps = 0, acc = 0;
@@ -126,7 +173,16 @@ public class g extends Applet implements Runnable {
 					ballsInPot[i].clear();
 				}
 				for (int i = 0; i < 48; i++) {
-					clr[i] = new Color(rand.nextInt(200), rand.nextInt(200), rand.nextInt(200));
+					int[] ballclr={0,0,0};
+					ballclr[0] = rand.nextInt(255);
+					ballclr[1] = rand.nextInt(255);
+					ballclr[2] = rand.nextInt(255);
+					while (ballclr[0]+ballclr[1]+ballclr[2]<255){//ensure bright colours
+						int n = rand.nextInt(3);
+						ballclr[n]+=1000;
+						if (ballclr[n]>255) ballclr[n]=255;
+					}
+					clr[i] = new Color(ballclr[0],ballclr[1],ballclr[2]);
 					// balls[i].travelling=true;
 					xv[i] = (rand.nextInt(200)) / 100.0 - 1;
 					yv[i] = (rand.nextInt(200)) / 100.0 - 1;
@@ -180,6 +236,14 @@ public class g extends Applet implements Runnable {
 				//update y position
 				yp[i]+=yv[i];
 				
+				if (tick%trailInterval==0){
+				//update trail
+				trailXpos[i].add((int)xp[i]);
+				trailYpos[i].add((int)yp[i]);
+				while (trailXpos[i].size()>trailNum) trailXpos[i].remove(0);
+				while (trailYpos[i].size()>trailNum) trailYpos[i].remove(0);
+				}
+				
 				double dist = Math.sqrt((xp[i]-potXPos[pot[i]])*(xp[i]-potXPos[pot[i]])+(yp[i]-potYPos[pot[i]])*(yp[i]-potYPos[pot[i]]));
 				
 				if (!trvl[i])
@@ -199,7 +263,7 @@ public class g extends Applet implements Runnable {
 				} else {
 					xv[i]*=friction;
 					yv[i]*=friction;
-					if (dist <potRad[pot[i]] - bRad+50){
+					if (dist <potRad[pot[i]] - bRad+extraFrictionRadius){
 						xv[i]*=extraFriction;
 						yv[i]*=extraFriction;
 					}
@@ -453,6 +517,7 @@ public class g extends Applet implements Runnable {
 			lastTime = now;
 
 			// Render
+			
 			if (antialiasing)
 			{
 				g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -466,27 +531,39 @@ public class g extends Applet implements Runnable {
 
 			// draw the background
 			// g2d.drawImage(background, 0, 0, w-1, h-1, this);
-			g2d.setColor(Color.white);
+			g2d.setColor(clrBG);
 			g2d.fillRect(0, 0, w, h);
 			
-			g2d.setColor(Color.black);
+			g2d.setColor(clrText);
 			g2d.setFont(normalFont);
-			g2d.drawString("FPS " + String.valueOf(fps), 20, h-20);
-			g2d.drawString("Created by Cameron Dykstra", w-200, h-20);
-
-			for (int i = 0; i < 48; i++) {
-				g2d.setColor(clr[i]);
-				g2d.fillOval((int)xp[i]-bRad, (int)yp[i]-bRad, 2*bRad, 2*bRad);
-			}
+			g2d.drawString("FPS " + String.valueOf(fps), 10, h-10);
+			//g2d.drawString("Created by Cameron Dykstra", w-200, h-20);
 
 			// temporary
 			// g2d.setColor(Color.black);
 			// g2d.drawOval(balls[1].potXPos-balls[1].potRad,
 			// balls[1].potYPos-balls[1].potRad, 2*balls[1].potRad,
 			// 2*balls[1].potRad);
+			
+			//draw the trails
+			for (int i = 0; i < 48; i++) {
+				int prevX = (int)xp[i];
+				int prevY = (int)yp[i];
+				for (int j = trailXpos[i].size()-1; j >=0 ; j--) {
+					if (trailTransperancy){
+						g2d.setColor(new Color(clr[i].getRed(),clr[i].getGreen(),clr[i].getBlue(),(int)(255*trailAlpha[j])));
+					} else {
+						g2d.setColor(new Color((int)(clr[i].getRed()*trailAlpha[j]),(int)(clr[i].getGreen()*trailAlpha[j]),(int)(clr[i].getBlue()*trailAlpha[j])));
+					}
+					//g2d.drawLine(prevX, prevY, trailXpos[i].get(j), trailYpos[i].get(j));
+					g2d.draw(new Line2D.Float(prevX, prevY, trailXpos[i].get(j), trailYpos[i].get(j)));
+					prevX = trailXpos[i].get(j);
+					prevY = trailYpos[i].get(j);
+				}
+			}
 
 			// draw the pots
-			g2d.setColor(Color.black);
+			g2d.setColor(clrLines);
 			for (int i = 0; i < 14; i++) {
 				g2d.drawOval(potXPos[i] - potRad[i], potYPos[i] - potRad[i], 2 * potRad[i], 2 * potRad[i]);
 			}
@@ -494,29 +571,29 @@ public class g extends Applet implements Runnable {
 			// draw the current player text
 			if (!(gameOver || gameEnding)) {
 				if (!player) {
-					g2d.setColor(Color.blue);
+					g2d.setColor(clrDimBlue);
 					fm   = g2d.getFontMetrics(mediumFont);
 					rect = fm.getStringBounds("Blue's turn", g2d);
 					g2d.setFont(mediumFont);
-					g2d.drawString("Blue's turn", (int)(w/2-rect.getWidth()/2), (int)(50-rect.getHeight()/2  + fm.getAscent()));  // Draw the string.
+					g2d.drawString("Blue's turn", (int)(w/2 + 100 -rect.getWidth()/2), (int)(h/2-rect.getHeight()/2  + fm.getAscent()));  // Draw the string.
 				} else {
-					g2d.setColor(Color.red);
+					g2d.setColor(clrDimRed);
 					fm   = g2d.getFontMetrics(mediumFont);
 					rect = fm.getStringBounds("Red's turn", g2d);
 					g2d.setFont(mediumFont);
-					g2d.drawString("Red's turn", (int)(w/2-rect.getWidth()/2), (int)(50-rect.getHeight()/2  + fm.getAscent()));
+					g2d.drawString("Red's turn", (int)(w/2 - 100 -rect.getWidth()/2), (int)(h/2-rect.getHeight()/2  + fm.getAscent()));
 				}
 			}
 			
 			//draw the number of captured balls
-			g2d.setColor(new Color(0x44FF0000,true));
+			g2d.setColor(clrDimRed);
 			text=""+gameState[13];
 			fm   = g2d.getFontMetrics(hugeFont);
 			rect = fm.getStringBounds(text, g2d);
 			g2d.setFont(hugeFont);
 			g2d.drawString(text, (int)(potXPos[13]-rect.getWidth()/2), (int)(potYPos[13]-rect.getHeight()/2  + fm.getAscent()));
 			
-			g2d.setColor(new Color(0x440000FF,true));
+			g2d.setColor(clrDimBlue);
 			text=""+gameState[6];
 			fm   = g2d.getFontMetrics(hugeFont);
 			rect = fm.getStringBounds(text, g2d);
@@ -525,7 +602,7 @@ public class g extends Applet implements Runnable {
 			
 			//draw the number of balls in each pot
 			if (showNumbers){
-				g2d.setColor(new Color(0x440000FF,true));
+				g2d.setColor(clrDimBlue);
 				for (int i=0;i<6;i++){
 					text = ""+gameState[i];
 					fm   = g2d.getFontMetrics(largeFont);
@@ -533,7 +610,7 @@ public class g extends Applet implements Runnable {
 					g2d.setFont(largeFont);
 					g2d.drawString(text, (int)(potXPos[i]-rect.getWidth()/2), (int)(potYPos[i]-rect.getHeight()/2  + fm.getAscent()));
 				}
-				g2d.setColor(new Color(0x44FF0000,true));
+				g2d.setColor(clrDimRed);
 				for (int i=7;i<13;i++){
 					text = ""+gameState[i];
 					fm   = g2d.getFontMetrics(largeFont);
@@ -543,41 +620,50 @@ public class g extends Applet implements Runnable {
 				}
 			}
 			
+			//draw the balls
+			for (int i = 0; i < 48; i++) {
+				g2d.setColor(clr[i]);
+				g2d.fillOval((int)xp[i]-bRad, (int)yp[i]-bRad, 2*bRad, 2*bRad);
+			}
+			
 			//draw the buttons
-			g2d.setColor(btnSelClr);
+			g2d.setColor(clrBtnBG);
 			for (int i=0;i<numOfBtns;i++){
 				if (btnStates[i]){
-					g2d.fillRect(btnXoff, btnYoff+i*btnH+i*btnSpc, btnW, btnH);
+					g2d.fillRect(btnXoff, btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0), btnW, btnH);
 				}
 			}
-			g2d.setColor(Color.black);
+			g2d.setColor(clrLines);
 			for (int i=0;i<numOfBtns;i++){
 				if (i==0 || (i!=5 && !gameStarted) || (i==5 && gameStarted) || btnStates[i]){
-					g2d.drawRect(btnXoff, btnYoff+i*btnH+i*btnSpc, btnW, btnH);
+					g2d.drawRect(btnXoff, btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0), btnW, btnH);
 				}
 			}
+			g2d.setColor(clrText);
 			for (int i=0;i<numOfBtns;i++){
 				if (i==0 || (i!=5 && !gameStarted) || (i==5 && gameStarted) || btnStates[i]){
 					text = btnNames[i];
 					fm   = g2d.getFontMetrics(normalFont);
 					rect = fm.getStringBounds(text, g2d);
 					g2d.setFont(normalFont);
-					g2d.drawString(text, (int)(btnXoff+btnW/2 - rect.getWidth()/2), (int)(btnYoff+i*(btnH+btnSpc)+btnH/2 - rect.getHeight()/2 + fm.getAscent()));
+					g2d.drawString(text, (int)(btnXoff+btnW/2 - rect.getWidth()/2), (int)(btnYoff+i*(btnH+btnSpc)+(i>btnJumpPos ? btnJumpAmnt : 0)+btnH/2 - rect.getHeight()/2 + fm.getAscent()));
 				}
 			}
 			
 			//draw the startgame and newgame buttons
 			if (!gameStarted){
-				g2d.setColor(Color.black);
+				g2d.setColor(clrLines);
 				g2d.drawRect(strtBtnX, strtBtnY, strtBtnW, strtBtnH);
+				g2d.setColor(clrText);
 				text = "Start Game";
 				fm   = g2d.getFontMetrics(mediumFont);
 				rect = fm.getStringBounds(text, g2d);
 				g2d.setFont(mediumFont);
 				g2d.drawString(text, (int)(strtBtnX+strtBtnW/2 - rect.getWidth()/2), (int)(strtBtnY+strtBtnH/2 - rect.getHeight()/2 + fm.getAscent()));
 			} else if (gameOver){
-				g2d.setColor(Color.black);
+				g2d.setColor(clrLines);
 				g2d.drawRect(strtBtnX, strtBtnY, strtBtnW, strtBtnH);
+				g2d.setColor(clrText);
 				text = "New Game";
 				fm   = g2d.getFontMetrics(mediumFont);
 				rect = fm.getStringBounds(text, g2d);
@@ -591,10 +677,10 @@ public class g extends Applet implements Runnable {
 				g2d.setColor(Color.black);
 				text = "Tie";
 				if (!tie && !winner){
-					g2d.setColor(Color.blue);
+					g2d.setColor(clrTextBlue);
 					text = "Blue Wins!";
 				} else if (!tie && winner){
-					g2d.setColor(Color.red);
+					g2d.setColor(clrTextRed);
 					text = "Red Wins!";
 				}
 				fm   = g2d.getFontMetrics(largeFont);
@@ -602,6 +688,39 @@ public class g extends Applet implements Runnable {
 				g2d.setFont(largeFont);
 				g2d.drawString(text, (int)(w/2-rect.getWidth()/2), (int)(h/2-rect.getHeight()/2  + fm.getAscent()));
 			}
+			
+			//draw the trails
+//			for (int i=0; i<trailBIs.size();i++){
+//				float[] factors = new float[] {
+//						trailAlphas[i], trailAlphas[i], trailAlphas[i]
+//					};
+//					float[] offsets = new float[] {
+//					    0.0f, 0.0f, 0.0f
+//					};
+//				RescaleOp op = new RescaleOp(factors,offsets,null);
+//				g.drawImage(trailBIs.get(i), op, 0, 0);
+//			}
+			
+//			float[] factors = new float[] {
+//					1.0f,1.0f,1.0f,alphaMult
+//			};
+//			float[] offsets = new float[] {
+//					0.0f, 0.0f, 0.0f, 0.0f
+//			};
+//			RescaleOp op = new RescaleOp(factors,offsets,null);
+//			op.filter(screen, screen);
+//			
+//			factors = new float[] {
+//					1.0f,1.0f,1.0f,1.0f
+//			};
+//			offsets = new float[] {
+//					0.0f, 0.0f, 0.0f,0.0f
+//			};
+//			op = new RescaleOp(factors,offsets,null);
+			
+			
+			//draw the new screen to the old screen
+			//g.drawImage(newScreen, null, 0, 0);
 
 			// Draw the entire results on the screen.
 			appletGraphics.drawImage(screen, 0, 0, null);
@@ -650,11 +769,12 @@ public class g extends Applet implements Runnable {
 			for (int i=0;i<numOfBtns;i++){
 				if (i!=0 && i!=5 && gameStarted){continue;}
 				if (i==5 && !gameStarted){continue;}
-				if (mx>btnXoff && mx<btnXoff+btnW && my>btnYoff+i*btnH+i*btnSpc && my<btnYoff+(i+1)*btnH+i*btnSpc){
+				if (mx>btnXoff && mx<btnXoff+btnW && my>btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0) && my<btnYoff+(i+1)*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0)){
 					btnStates[i]=!btnStates[i];
 					switch (i) {
 					case 0:
 						antialiasing=!antialiasing;
+						trailTransperancy=!trailTransperancy;
 						break;
 					case 1:
 						AIdifficulty=AIEasy;
