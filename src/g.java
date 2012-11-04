@@ -11,6 +11,7 @@
  */
 
 import java.applet.Applet;
+import java.awt.AlphaComposite;
 import java.awt.Event;
 import java.awt.Color;
 import java.awt.Font;
@@ -73,6 +74,8 @@ public class g extends Applet implements Runnable {
 		Graphics2D g2d = (Graphics2D) screen.getGraphics();
 		Graphics2D appletGraphics = (Graphics2D) getGraphics();
 		
+		
+		
 		boolean gameEnding = false;
 		boolean gameEnding2 = false;
 		Random rand = new Random();
@@ -118,14 +121,15 @@ public class g extends Applet implements Runnable {
 		
 		//trail buffered images and vars
 		float alphaMult = 0.92f;
-		int trailNum = 50;
-		int trailInterval = 2;
+		int trailNum = 25;
+		int trailInterval = 1;
 		float trailAlpha[] = new float[trailNum];
 		float alpha = 1.0f;
 		for (int i=trailNum-1;i>=0;i--){
 			trailAlpha[i]=alpha;
 			alpha*=alphaMult;
 		}
+		float defaultAlpha =0.2f;
 		
 		ArrayList<Integer> trailXpos[] = new ArrayList[48];
 		ArrayList<Integer> trailYpos[] = new ArrayList[48];
@@ -150,8 +154,8 @@ public class g extends Applet implements Runnable {
 		//Colours
 		Color clrBG = Color.black;
 		Color clrLines = Color.gray;
-		Color clrDimRed = new Color(0x66FF0000,true);
-		Color clrDimBlue = new Color(0x660000FF,true);
+		Color clrDimRed = new Color(0x44FF0000,true);
+		Color clrDimBlue = new Color(0x440000FF,true);
 		Color clrTextRed = Color.red;
 		Color clrTextBlue = Color.blue;
 		Color clrBtnBG = new Color(0x8040FF00,true);
@@ -517,7 +521,7 @@ public class g extends Applet implements Runnable {
 			lastTime = now;
 
 			// Render
-			
+
 			if (antialiasing)
 			{
 				g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -532,7 +536,9 @@ public class g extends Applet implements Runnable {
 			// draw the background
 			// g2d.drawImage(background, 0, 0, w-1, h-1, this);
 			g2d.setColor(clrBG);
+			g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, defaultAlpha));
 			g2d.fillRect(0, 0, w, h);
+			
 			
 			g2d.setColor(clrText);
 			g2d.setFont(normalFont);
@@ -551,20 +557,27 @@ public class g extends Applet implements Runnable {
 				int prevY = (int)yp[i];
 				for (int j = trailXpos[i].size()-1; j >=0 ; j--) {
 					if (trailTransperancy){
-						g2d.setColor(new Color(clr[i].getRed(),clr[i].getGreen(),clr[i].getBlue(),(int)(255*trailAlpha[j])));
+						//g2d.setColor(new Color(clr[i].getRed(),clr[i].getGreen(),clr[i].getBlue(),(int)(255*trailAlpha[j])));
+						
 					} else {
-						g2d.setColor(new Color((int)(clr[i].getRed()*trailAlpha[j]),(int)(clr[i].getGreen()*trailAlpha[j]),(int)(clr[i].getBlue()*trailAlpha[j])));
+						//g2d.setColor(new Color((int)(clr[i].getRed()*trailAlpha[j]),(int)(clr[i].getGreen()*trailAlpha[j]),(int)(clr[i].getBlue()*trailAlpha[j])));
 					}
-					//g2d.drawLine(prevX, prevY, trailXpos[i].get(j), trailYpos[i].get(j));
-					g2d.draw(new Line2D.Float(prevX, prevY, trailXpos[i].get(j), trailYpos[i].get(j)));
+					g2d.setColor(clr[i]);
+					g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, trailAlpha[j]));
+					g2d.drawLine(prevX, prevY, trailXpos[i].get(j), trailYpos[i].get(j));
+					//g2d.draw(new Line2D.Float(prevX, prevY, trailXpos[i].get(j), trailYpos[i].get(j)));
 					prevX = trailXpos[i].get(j);
 					prevY = trailYpos[i].get(j);
 				}
 			}
+			g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, defaultAlpha));
+			
 
 			// draw the pots
 			g2d.setColor(clrLines);
 			for (int i = 0; i < 14; i++) {
+				if (i<7) g2d.setColor(clrDimBlue);
+				else  g2d.setColor(clrDimRed);
 				g2d.drawOval(potXPos[i] - potRad[i], potYPos[i] - potRad[i], 2 * potRad[i], 2 * potRad[i]);
 			}
 
@@ -620,27 +633,32 @@ public class g extends Applet implements Runnable {
 				}
 			}
 			
+			g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
 			//draw the balls
 			for (int i = 0; i < 48; i++) {
 				g2d.setColor(clr[i]);
 				g2d.fillOval((int)xp[i]-bRad, (int)yp[i]-bRad, 2*bRad, 2*bRad);
 			}
+			g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, defaultAlpha));
 			
 			//draw the buttons
 			g2d.setColor(clrBtnBG);
 			for (int i=0;i<numOfBtns;i++){
+				if (i==0) continue;//do not draw antialias button
 				if (btnStates[i]){
 					g2d.fillRect(btnXoff, btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0), btnW, btnH);
 				}
 			}
 			g2d.setColor(clrLines);
 			for (int i=0;i<numOfBtns;i++){
+				if (i==0) continue;//do not draw antialias button
 				if (i==0 || (i!=5 && !gameStarted) || (i==5 && gameStarted) || btnStates[i]){
 					g2d.drawRect(btnXoff, btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0), btnW, btnH);
 				}
 			}
 			g2d.setColor(clrText);
 			for (int i=0;i<numOfBtns;i++){
+				if (i==0) continue;//do not draw antialias button
 				if (i==0 || (i!=5 && !gameStarted) || (i==5 && gameStarted) || btnStates[i]){
 					text = btnNames[i];
 					fm   = g2d.getFontMetrics(normalFont);
@@ -772,9 +790,9 @@ public class g extends Applet implements Runnable {
 				if (mx>btnXoff && mx<btnXoff+btnW && my>btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0) && my<btnYoff+(i+1)*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0)){
 					btnStates[i]=!btnStates[i];
 					switch (i) {
-					case 0:
-						antialiasing=!antialiasing;
-						trailTransperancy=!trailTransperancy;
+					case 0://disabled
+						//antialiasing=!antialiasing;
+						//trailTransperancy=!trailTransperancy;
 						break;
 					case 1:
 						AIdifficulty=AIEasy;
