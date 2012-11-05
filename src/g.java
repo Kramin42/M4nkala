@@ -62,6 +62,8 @@ public class g extends Applet implements Runnable {
 	
 	boolean createNewGame = true;
 	boolean gameStarted = false;
+	boolean gameStarting = false;
+	boolean startGame = false;
 	boolean gameOver = false;
 	int strtBtnX=300,strtBtnY=340,strtBtnW=200,strtBtnH=40;
 
@@ -116,6 +118,7 @@ public class g extends Applet implements Runnable {
 		double yv[] = new double[48];
 		int pot[] = new int[48];
 		boolean trvl[] = new boolean[48];
+		boolean free[] = new boolean[48];
 		Color clr[] = new Color[48];
 		int bRad = 1;
 		
@@ -168,6 +171,29 @@ public class g extends Applet implements Runnable {
 		for (int i = 0; i < 14; i++) {
 			ballsInPot[i] = new ArrayList<Integer>();
 		}
+		
+		//generate the colours
+		for (int i = 0; i < 48; i++) {
+			int[] ballclr={0,0,0};
+			ballclr[0] = rand.nextInt(255);
+			ballclr[1] = rand.nextInt(255);
+			ballclr[2] = rand.nextInt(255);
+			while (ballclr[0]+ballclr[1]+ballclr[2]<255){//ensure bright colours
+				int n = rand.nextInt(3);
+				ballclr[n]+=1000;
+				if (ballclr[n]>255) ballclr[n]=255;
+			}
+			clr[i] = new Color(ballclr[0],ballclr[1],ballclr[2]);
+		}
+		
+		//generate random positions and velocities
+		for (int i = 0; i < 48; i++) {
+			free[i]=true;
+			xv[i] = (rand.nextInt(800)) / 100.0 - 4;
+			yv[i] = (rand.nextInt(800)) / 100.0 - 4;
+			xp[i] = rand.nextInt(w);
+			yp[i] = rand.nextInt(h);
+		}
 
 		// Game loop.
 		while (true) {
@@ -175,33 +201,13 @@ public class g extends Applet implements Runnable {
 				//new game code
 				for (int i=0; i<14;i++){
 					ballsInPot[i].clear();
+					gameState[i] = 0;
 				}
 				for (int i = 0; i < 48; i++) {
-					int[] ballclr={0,0,0};
-					ballclr[0] = rand.nextInt(255);
-					ballclr[1] = rand.nextInt(255);
-					ballclr[2] = rand.nextInt(255);
-					while (ballclr[0]+ballclr[1]+ballclr[2]<255){//ensure bright colours
-						int n = rand.nextInt(3);
-						ballclr[n]+=1000;
-						if (ballclr[n]>255) ballclr[n]=255;
-					}
-					clr[i] = new Color(ballclr[0],ballclr[1],ballclr[2]);
-					// balls[i].travelling=true;
-					xv[i] = (rand.nextInt(200)) / 100.0 - 1;
-					yv[i] = (rand.nextInt(200)) / 100.0 - 1;
-					int p = i / 4;
-					if (p >= 6) {
-						p++;
-					}
-					pot[i]=p;
-					xp[i] = potXPos[p] + rand.nextInt(20) - 10;
-					yp[i] = potYPos[p] + rand.nextInt(20) - 10;
-					ballsInPot[p].add(i);
-					gameState[p] = 4;
+					free[i]=true;
 				}
-				gameState[6] = 0;
-				gameState[13] = 0;
+				//gameState[6] = 0;
+				//gameState[13] = 0;
 
 				player = rand.nextBoolean();// player 1 is false, player 2 is true
 				turnOver = false;
@@ -213,6 +219,8 @@ public class g extends Applet implements Runnable {
 				tie = false;
 				createNewGame=false;
 				gameStarted = false;
+				gameStarting = false;
+				startGame = false;
 			}
 			
 			long now = System.nanoTime();
@@ -252,8 +260,15 @@ public class g extends Applet implements Runnable {
 				
 				if (!trvl[i])
 				{
-					if (dist>potRad[pot[i]]-bRad)
+					if (free[i]){
+						if (xp[i]>w){xp[i]=w;xv[i]=-xv[i];}
+						if (xp[i]<0){xp[i]=0;xv[i]=-xv[i];}
+						if (yp[i]>h){yp[i]=h;yv[i]=-yv[i];}
+						if (yp[i]<0){yp[i]=0;yv[i]=-yv[i];}
+					}
+					else if (dist>potRad[pot[i]]-bRad)
 					{
+						//if (dist>potRad[pot[i]]-bRad+100) System.out.println("way out!!!: "+pot[i]);
 						double unx = (xp[i]-potXPos[pot[i]])/dist;//unit norm
 			    		double uny = (yp[i]-potYPos[pot[i]])/dist;
 			    		double utx = -uny;//unit tangent
@@ -275,6 +290,11 @@ public class g extends Applet implements Runnable {
 					yv[i]+=gravity*(potYPos[pot[i]]-yp[i])/dist;
 					if (dist < potRad[pot[i]] - bRad - 1) {
 						trvl[i] = false;
+						int count=0;
+						for (int j=0; j<48; j++){
+							if (!trvl[j]) count++;
+						}
+						//System.out.println("balls in pots: "+count);
 					}
 				}
 			}
@@ -471,6 +491,31 @@ public class g extends Applet implements Runnable {
 				gameEnding2=true;
 			}
 			
+			if (startGame){
+				startGame=false;
+				gameStarting=true;
+				//System.out.println("game starting");
+				areBallsReady=false;
+				gameState[6]=48;//temporarily assign them all to an main pot, they get sent to the appropriate pot in the next few lines
+				for (int i=0; i<48; i++){
+					ballsInPot[6].add(i);
+					int p = i / 4;
+					if (p >= 6) {
+						p++;
+					}
+					//System.out.println(p);
+					sendListSrc.add(6);
+					sendListTrgt.add(p);
+					free[i]=false;
+				}
+			}
+			
+			if (gameStarting && areBallsReady){
+				//System.out.println("game started");
+				gameStarting=false;
+				gameStarted=true;
+			}
+			
 			// send balls from pot to pot
 			while (sendListSrc.size() > 0) {
 //				if (ballsInPot[src].size() == 0) {
@@ -491,7 +536,8 @@ public class g extends Applet implements Runnable {
 				ballsInPot[src].remove(ballsInPot[src].size() - 1);
 				gameState[src]--;
 				gameState[dest]++;
-				//System.out.println("sending ball from pot "+src+" to pot "+dest);
+				//System.out.println("sending ball "+index+" from pot "+src+" to pot "+dest);
+				//System.out.println(ballsInPot[dest].size());
 				sendListSrc.remove(sendListSrc.size()-1);
 				sendListTrgt.remove(sendListTrgt.size()-1);
 				//print game state
@@ -582,7 +628,7 @@ public class g extends Applet implements Runnable {
 			}
 
 			// draw the current player text
-			if (!(gameOver || gameEnding)) {
+			if (!(gameOver || gameEnding) && gameStarted) {
 				if (!player) {
 					g2d.setColor(clrDimBlue);
 					fm   = g2d.getFontMetrics(mediumFont);
@@ -669,7 +715,7 @@ public class g extends Applet implements Runnable {
 			}
 			
 			//draw the startgame and newgame buttons
-			if (!gameStarted){
+			if (!startGame && !gameStarting && !gameStarted){
 				g2d.setColor(clrLines);
 				g2d.drawRect(strtBtnX, strtBtnY, strtBtnW, strtBtnH);
 				g2d.setColor(clrText);
@@ -781,7 +827,7 @@ public class g extends Applet implements Runnable {
 					createNewGame = true;
 				}
 				if (!gameStarted){
-					gameStarted = true;
+					startGame = true;
 				}
 			}
 			for (int i=0;i<numOfBtns;i++){
