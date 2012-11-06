@@ -16,19 +16,12 @@ import java.awt.Event;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.event.MouseEvent;
-import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.BufferedImageOp;
-import java.awt.image.RescaleOp;
 import java.util.ArrayList;
 import java.util.Random;
-
-import javax.swing.text.StyleContext.SmallAttributeSet;
 
 public class g extends Applet implements Runnable {
 
