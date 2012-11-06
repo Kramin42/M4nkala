@@ -29,7 +29,7 @@ public class g extends Applet implements Runnable {
 		new Thread(this).start();
 	}
 
-	int mx = 0, my = 0;
+	//int mx = 0, my = 0;
 	
 	boolean showNumbers = true;
 	
@@ -149,13 +149,13 @@ public class g extends Applet implements Runnable {
 		
 		//Colours
 		Color clrBG = Color.black;
-		Color clrLines = Color.gray;
-		Color clrDimRed = new Color(0x44FF0000,true);
-		Color clrDimBlue = new Color(0x440000FF,true);
+		Color clrLines = Color.darkGray;
+		Color clrDimRed = new Color(0x66FF0000,true);
+		Color clrDimBlue = new Color(0x660000FF,true);
 		Color clrTextRed = Color.red;
 		Color clrTextBlue = Color.blue;
 		Color clrBtnBG = new Color(0x8040FF00,true);
-		Color clrText = new Color(0xFFFFFFFF,true);
+		Color clrText = Color.white;
 
 		// Some variables to use for the fps.
 		int tick = 0, fps = 0, acc = 0;
@@ -560,7 +560,7 @@ public class g extends Applet implements Runnable {
 			lastTime = now;
 
 			// Render
-
+			
 			if (antialiasing)
 			{
 				g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -793,29 +793,18 @@ public class g extends Applet implements Runnable {
 	}
 
 	public boolean handleEvent(Event e) {
-		switch (e.id) {
-		case Event.KEY_PRESS:
-		case Event.KEY_ACTION:
-			// key pressed
-			break;
-		case Event.KEY_RELEASE:
-			// key released
-			break;
-		case Event.MOUSE_DOWN:
-			// mouse button pressed
-			break;
-		case Event.MOUSE_UP:
+		if (e.id == Event.MOUSE_UP){
 			// mouse button released
-			mx = e.x;
-			my = e.y;
+			//mx = e.x;
+			//my = e.y;
 			for (int i = 0; i < 14; i++) {
-				if ((mx - potXPos[i]) * (mx - potXPos[i]) + (my - potYPos[i]) * (my - potYPos[i]) < potRad[i] * potRad[i]) {
+				if ((e.x - potXPos[i]) * (e.x - potXPos[i]) + (e.y - potYPos[i]) * (e.y - potYPos[i]) < potRad[i] * potRad[i]) {
 					potClicked = i;
 					mouseClick = true;
 					break;
 				}
 			}
-			if (mx>strtBtnX && mx<strtBtnX+strtBtnW && my>strtBtnY && my<strtBtnY+strtBtnH){
+			if (e.x>strtBtnX && e.x<strtBtnX+strtBtnW && e.y>strtBtnY && e.y<strtBtnY+strtBtnH){
 				if (gameOver){
 					createNewGame = true;
 				}
@@ -826,7 +815,7 @@ public class g extends Applet implements Runnable {
 			for (int i=0;i<numOfBtns;i++){
 				if (i!=0 && i!=5 && gameStarted){continue;}
 				if (i==5 && !gameStarted){continue;}
-				if (mx>btnXoff && mx<btnXoff+btnW && my>btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0) && my<btnYoff+(i+1)*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0)){
+				if (e.x>btnXoff && e.x<btnXoff+btnW && e.y>btnYoff+i*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0) && e.y<btnYoff+(i+1)*btnH+i*btnSpc+(i>btnJumpPos ? btnJumpAmnt : 0)){
 					btnStates[i]=!btnStates[i];
 					switch (i) {
 					case 0://disabled
@@ -877,13 +866,6 @@ public class g extends Applet implements Runnable {
 					//System.out.println("AI difficulty is: "+AIdifficulty);
 				}
 			}
-			break;
-		case Event.MOUSE_MOVE:
-			mx = e.x;
-			my = e.y;
-			break;
-		case Event.MOUSE_DRAG:
-			break;
 		}
 		return false;
 	}
