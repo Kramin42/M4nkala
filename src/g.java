@@ -434,6 +434,7 @@ public class g extends Applet implements Runnable {
 				if (((!player && sPot < 6) || (player && sPot > 6 && sPot < 13)) && areBallsReady) {
 					int currentPot = sPot;
 					size = ballsInPot[sPot].size();
+					boolean under13 = size<=13;
 					while (size != 0) {
 						currentPot++;
 						if ((!player && currentPot == 13) || (player && currentPot == 6)) {
@@ -449,7 +450,7 @@ public class g extends Applet implements Runnable {
 								turnOver = false;
 								extraTurn = true;
 								//System.out.println("extra turn");
-							} else if (gameState[currentPot] == 0 && ((!player && currentPot < 6) || (player && currentPot > 6 && currentPot < 13))) {
+							} else if ((gameState[currentPot] == 0 || currentPot == sPot/*special case of exactly 13 balls in pot*/) && under13 && ((!player && currentPot < 6) || (player && currentPot > 6 && currentPot < 13))) {
 								turnOver = false;
 								capture = true;
 								capturePot = currentPot;
@@ -523,7 +524,7 @@ public class g extends Applet implements Runnable {
 				double dist = Math.sqrt((xp[index] - targetx) * (xp[index] - targetx) + (yp[index] - targety) * (yp[index] - targety));
 				xv[index] = ballspeed * (targetx - xp[index]) / dist;
 				yv[index] = ballspeed * (targety - yp[index]) / dist;
-				pot[index]=dest;
+				pot[index]= dest;
 				// System.out.println("xvel: "+balls[index].xvel+", yvel: "+balls[index].yvel);
 				ballsInPot[dest].add(index);
 				ballsInPot[src].remove(ballsInPot[src].size() - 1);
