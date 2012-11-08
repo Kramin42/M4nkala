@@ -732,7 +732,7 @@ public class g extends Applet implements Runnable {
 
 			// draw the winner screen
 			if (gameOver) {
-				g2d.setColor(Color.black);
+				g2d.setColor(clrText);
 				text = "Tie";
 				if (!tie && !winner){
 					g2d.setColor(clrTextBlue);
