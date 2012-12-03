@@ -221,7 +221,7 @@ public class g extends Applet implements Runnable {
 			tick++;
 			if (acc >= 1000000000L) {
 				acc -= 1000000000L;
-				fps = tick;
+				//fps = tick;
 				tick = 0;
 			}
 
@@ -283,10 +283,10 @@ public class g extends Applet implements Runnable {
 					yv[i]+=gravity*(potYPos[pot[i]]-yp[i])/dist;
 					if (dist < potRad[pot[i]] - bRad - 1) {
 						trvl[i] = false;
-						int count=0;
-						for (int j=0; j<48; j++){
-							if (!trvl[j]) count++;
-						}
+//						int count=0;
+//						for (int j=0; j<48; j++){
+//							if (!trvl[j]) count++;
+//						}
 						//System.out.println("balls in pots: "+count);
 					}
 				}
@@ -580,9 +580,9 @@ public class g extends Applet implements Runnable {
 			g2d.fillRect(0, 0, w, h);
 			
 			
-			g2d.setColor(clrText);
-			g2d.setFont(normalFont);
-			g2d.drawString("FPS " + String.valueOf(fps), 10, h-10);
+			//g2d.setColor(clrText);
+			//g2d.setFont(normalFont);
+			//g2d.drawString("FPS " + String.valueOf(fps), 10, h-10);
 			//g2d.drawString("Created by Cameron Dykstra", w-200, h-20);
 
 			// temporary
